@@ -1,29 +1,19 @@
 package org.example.controller;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
-import io.rsocket.Payload;
-import io.rsocket.metadata.TaggingMetadataCodec;
-import io.rsocket.util.ByteBufPayload;
-import io.rsocket.util.DefaultPayload;
 import org.example.dto.ServerResponse;
 import org.example.dto.Status;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.rsocket.RSocketRequester;
-import org.springframework.messaging.rsocket.annotation.ConnectMapping;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
-import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 // See docs: https://docs.spring.io/spring-framework/docs/current/reference/html/rsocket.html
+// Client responder: https://www.vinsguru.com/rsocket-client-responders/
 @Controller
 public class RSocketController {
 
