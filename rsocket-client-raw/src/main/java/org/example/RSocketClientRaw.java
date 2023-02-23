@@ -60,9 +60,15 @@ public class RSocketClientRaw {
 //                .reconnect(Retry.backoff(50, Duration.ofMillis(500)))
 //                .connect(TcpClientTransport.create("127.0.0.1", 8099));
 
+        ByteBuf setupRouteMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("connect.setup"));
+
         RSocket socket = RSocketConnector.create()
 //                .acceptor()
                 .metadataMimeType(WellKnownMimeType.MESSAGE_RSOCKET_ROUTING.getString())
+                // 建立连接时的 Payload
+                .setupPayload(ByteBufPayload.create(
+                        ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a message from client using rsocket-java libaray."),
+                        setupRouteMetadata))
                 .acceptor(SocketAcceptor.forRequestResponse(
                         payload -> {
                             final String route = decodeRoute(payload.sliceMetadata());
@@ -76,6 +82,8 @@ public class RSocketClientRaw {
 
                             if ("request.status.callback".equals(route)) {
                                 return Mono.just(ByteBufPayload.create("Thanks for handling my task!"));
+                            } else if ("request.server.call".equals(route)) {
+                                return Mono.just(ByteBufPayload.create("You called my handler actively from server."));
                             }
 
                             byte[] respBytes = String
@@ -129,6 +137,15 @@ public class RSocketClientRaw {
                         routeMetadata));
 
         System.out.println(taskResp.block().getDataUtf8());
+
+        // 测试 server 保存的 requester 是否能正常调用 client 函数  test.connect.requester
+        routeMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("test.connect.requester"));
+        Mono<Payload> serverResp = socket.requestResponse(
+                ByteBufPayload.create(
+                        ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "Requesting test.connect.requester / This is a message from client using rsocket-java libaray."),
+                        routeMetadata));
+
+        System.out.println(serverResp.block().getDataUtf8());
 
         socket.onClose().block();
     }

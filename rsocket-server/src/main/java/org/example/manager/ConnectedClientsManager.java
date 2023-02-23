@@ -1,10 +1,12 @@
 package org.example.manager;
 
 import org.springframework.messaging.rsocket.RSocketRequester;
+import org.springframework.stereotype.Service;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Service
 public class ConnectedClientsManager {
     private final ConcurrentHashMap<String, RSocketRequester> clients;
 

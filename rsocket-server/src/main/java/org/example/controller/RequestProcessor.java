@@ -15,16 +15,16 @@ import java.util.UUID;
 @Service
 public class RequestProcessor {
     public void processRequests(RSocketRequester rSocketRequester, UUID uuid) {
-        System.out.println("I'm handling this!");
+        System.out.println("[RequestProcessor.processRequests]I'm handling this!");
         ByteBuf routeMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("request.status.callback"));
 
         Mono.just("Your request " + uuid + "  is completed")
 //                .delayElement(Duration.ofSeconds(ThreadLocalRandom.current().nextInt(5, 10)))
                 .flatMap(m -> rSocketRequester.rsocketClient().requestResponse(
                                         Mono.just(ByteBufPayload.create(
-                                                ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a message from client using rsocket-java libaray."),
+                                                ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a message from server using spring."),
                                                 routeMetadata)))
-                                .doOnSuccess(p -> System.out.println(p.getDataUtf8()))
+                                .doOnSuccess(p ->System.out.printf("[RequestProcessor.processRequests]Received from client: %s.", p.getDataUtf8()))
 //                        .route("request.status.callback")
 //                        .data(m)
 //                                .send()

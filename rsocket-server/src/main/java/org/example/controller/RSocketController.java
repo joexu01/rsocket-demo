@@ -1,14 +1,22 @@
 package org.example.controller;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
+import io.rsocket.metadata.TaggingMetadataCodec;
+import io.rsocket.util.ByteBufPayload;
 import org.example.dto.ServerResponse;
 import org.example.dto.Status;
+import org.example.manager.ConnectedClientsManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.rsocket.RSocketRequester;
+import org.springframework.messaging.rsocket.annotation.ConnectMapping;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
@@ -51,5 +59,43 @@ public class RSocketController {
         UUID uuid = UUID.randomUUID();
         this.requestProcessor.processRequests(rSocketRequester, uuid);
         return Mono.just(uuid.toString());
+    }
+
+    @Autowired
+    private ConnectedClientsManager clientsManager;
+
+    @ConnectMapping("connect.setup")
+    public Mono<Void> setup(String data, RSocketRequester rSocketRequester) {
+        System.out.printf("[connect.setup]Client connection: %s\n", data);
+        clientsManager.putClientRequester("123", rSocketRequester);
+//        return Mono.just(String.format("Connection established: %s.", data));
+        return Mono.empty();
+    }
+
+    @MessageMapping("test.connect.requester")
+    public Mono<String> testRequester(String data) {
+        System.out.printf("[test.connect.requester]Received echo string from client: %s\n", data);
+
+        // Test rSocket Requester
+        RSocketRequester requester = clientsManager.getClientRequester("123");
+
+        // 注意 Metadata 的 Route
+        ByteBuf routeMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("request.server.call"));
+
+        if (requester != null) {
+            Mono.just("Server is calling you.")
+//                .delayElement(Duration.ofSeconds(ThreadLocalRandom.current().nextInt(5, 10)))
+                    .flatMap(m -> requester.rsocketClient().requestResponse(
+                                            Mono.just(ByteBufPayload.create(
+                                                    ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a message from server using spring-stack."),
+                                                    routeMetadata)))
+                                    .doOnSuccess(p -> System.out.printf("[test.connect.requester]Received from client: %s.", p.getDataUtf8()))
+//                        .route("request.status.callback")
+//                        .data(m)
+//                                .send()
+                    )
+                    .subscribe();
+        }
+        return Mono.just(String.format("[test.connect.requester]I received your string: %s. I will call your handler.", data));
     }
 }
