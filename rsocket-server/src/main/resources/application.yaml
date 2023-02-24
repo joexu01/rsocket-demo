@@ -1,33 +1,18 @@
 spring:
-  r2dbc:
-    url: r2dbc:h2:mem:///stocktest
-    username: admin
-    password: password
-  #  datasource:
-  #    url: jdbc:h2:mem:stocktest;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-  #    platform: h2
-  #    username: admin
-  #    password: password
-  #    driverClassName: org.h2.Driver
-  #    schema: classpath:db/schema.sql
-  #    data: classpath:db/data.sql
-  #  jpa:
-  #    database-platform: org.hibernate.dialect.H2Dialect
-  #    hibernate:
-  #      ddl-auto: update
-  #    properties:
-  #      hibernate:
-  #        show_sql: true
-  #        use_sql_comments: true
-  #        format_sql: true
-  thymeleaf:
-    cache: false
   rsocket:
     server:
       port: 8099
-#  rsocket:
-#    server:
-#      mapping-path: /rsocket
-#      transport: websocket
+      transport: tcp
+      ssl:
+        enabled: true  # 开启证书验证
+        key-store-type: "PKCS12" # 证书类型
+        key-store: classpath:keystore/rsocket-server.p12  #类路径下的自签证书
+#        key-store: "/home/joseph/repo/rsocket-java-demo/rsocket-server/src/main/resources/keystore/rsocket-server.p12"
+        key-store-password: "password" #证书密码
+        client-auth: none
+        protocol: "TLS"
+        enabled-protocols: "TLSv1.2"
+        key-alias: "rsocket" # 证书别名
+
 server:
-  port: 8118
+  port: 8080

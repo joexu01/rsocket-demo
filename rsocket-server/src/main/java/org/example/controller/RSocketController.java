@@ -8,6 +8,8 @@ import io.rsocket.util.ByteBufPayload;
 import org.example.dto.ServerResponse;
 import org.example.dto.Status;
 import org.example.manager.ConnectedClientsManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -24,6 +26,28 @@ import java.util.UUID;
 // Client responder: https://www.vinsguru.com/rsocket-client-responders/
 @Controller
 public class RSocketController {
+
+    private static Logger logger = LoggerFactory.getLogger(RSocketController.class);
+
+    /*
+        初始化客户端管理 HashMap，将每一个连接到 Server 的 Client 的 RSocketRequester 保存起来
+        Map 的 Key 是连接 SETUP 阶段 Client 发送的 uuid
+     */
+    public static ConnectedClientsManager clientsManager;
+
+    @Autowired
+    private void initializeClientsManager() {
+        clientsManager = new ConnectedClientsManager();
+    }
+
+    // 对到来的连接做一些处理
+    @ConnectMapping("connect.setup")
+    public Mono<Void> setup(String data, RSocketRequester rSocketRequester) {
+        logger.info("[connect.setup]Client connection: {}\n", data);
+        clientsManager.putClientRequester("123", rSocketRequester);
+//        return Mono.just(String.format("Connection established: %s.", data));
+        return Mono.empty();
+    }
 
     // 接收主动上传的状态信息 @MessageMapping -> 使用 RSocket 处理
     @MessageMapping("upload.status")
@@ -61,16 +85,6 @@ public class RSocketController {
         return Mono.just(uuid.toString());
     }
 
-    @Autowired
-    private ConnectedClientsManager clientsManager;
-
-    @ConnectMapping("connect.setup")
-    public Mono<Void> setup(String data, RSocketRequester rSocketRequester) {
-        System.out.printf("[connect.setup]Client connection: %s\n", data);
-        clientsManager.putClientRequester("123", rSocketRequester);
-//        return Mono.just(String.format("Connection established: %s.", data));
-        return Mono.empty();
-    }
 
     @MessageMapping("test.connect.requester")
     public Mono<String> testRequester(String data) {
