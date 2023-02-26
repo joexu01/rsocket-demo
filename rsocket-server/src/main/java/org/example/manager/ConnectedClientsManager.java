@@ -5,14 +5,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ConnectedClientsManager {
     private static Logger logger = LoggerFactory.getLogger(ConnectedClientsManager.class);
-    private final ConcurrentHashMap<String, RSocketRequester> clients;
+    public final ConcurrentHashMap<String, ConnectedClient> clients;
 
     public ConnectedClientsManager() {
         this.clients = new ConcurrentHashMap<>();
@@ -23,20 +22,20 @@ public class ConnectedClientsManager {
     }
 
     public RSocketRequester getClientRequester(String clientIdentifier) {
-        return this.clients.get(clientIdentifier);
+        return this.clients.get(clientIdentifier).requester;
     }
 
     public void putClientRequester(String clientIdentifier, RSocketRequester requester) {
         // Reference: https://github.com/vinsguru/rsocket-course/blob/master/spring-rsocket/src/main/java/com/vinsguru/springrsocket/service/MathClientManager.java
         requester.rsocket()
                 .onClose()
-                .doFirst(() -> this.clients.put(clientIdentifier, requester))
+                .doFirst(() -> this.clients.put(clientIdentifier, new ConnectedClient(requester)))
                 .doFinally(sig -> {
                     logger.info("Client closed, uuid is {}. signal is {}.", clientIdentifier, sig.toString());
                 }).subscribe();
     }
 
-    public RSocketRequester removeClientRequester(String clientIdentifier, RSocketRequester requester) {
-        return this.clients.remove(clientIdentifier);
+    public void removeClientRequester(String clientIdentifier) {
+        this.clients.remove(clientIdentifier);
     }
 }

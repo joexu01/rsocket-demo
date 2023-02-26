@@ -13,6 +13,8 @@ spring:
         protocol: "TLS"
         enabled-protocols: "TLSv1.2"
         key-alias: "rsocket" # 证书别名
+  jackson:
+    time-zone: "GMT+8"
 
 server:
   port: 8080

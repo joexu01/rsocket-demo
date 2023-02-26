@@ -1,10 +1,5 @@
 package org.example.controller;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
-import io.rsocket.metadata.TaggingMetadataCodec;
-import io.rsocket.util.ByteBufPayload;
 import org.example.dto.ServerResponse;
 import org.example.dto.Status;
 import org.example.manager.ConnectedClientsManager;
@@ -18,7 +13,6 @@ import org.springframework.messaging.rsocket.annotation.ConnectMapping;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
@@ -44,7 +38,7 @@ public class RSocketController {
     @ConnectMapping("connect.setup")
     public Mono<Void> setup(String data, RSocketRequester rSocketRequester) {
         logger.info("[connect.setup]Client connection: {}\n", data);
-        clientsManager.putClientRequester("123", rSocketRequester);
+        clientsManager.putClientRequester(data, rSocketRequester);
 //        return Mono.just(String.format("Connection established: %s.", data));
         return Mono.empty();
     }
@@ -52,19 +46,20 @@ public class RSocketController {
     // 接收主动上传的状态信息 @MessageMapping -> 使用 RSocket 处理
     @MessageMapping("upload.status")
     public Mono<ServerResponse> receiveActivelyUploadStatus(Status status) {
-        System.out.printf("[upload.status]Received Status from client: %s\n", status.uuid);
+        logger.info("[upload.status]Received Status from client: {}", status.uuid);
         return Mono.just(new ServerResponse(String.format("I received your status. The Uuid was %s.", status.uuid)));
     }
 
     @MessageMapping("test.echo")
-    public Mono<String> simplyEcho(String data) {
-        System.out.printf("[test.echo]Received echo string from client: %s\n", data);
+    public Mono<String> simplyEcho(String data) throws InterruptedException {
+        Thread.sleep(3000);
+        logger.info("[test.echo]Received echo string from client: {}", data);
         return Mono.just(String.format("[test.echo]I received your string: %s. Thank you.", data));
     }
 
     @MessageMapping("")
     public Mono<String> simplyEchoNoHandler(String data) {
-        System.out.printf("No Handler: Received echo string from client: %s\n", data);
+        logger.info("No Handler: Received echo string from client: {}", data);
         return Mono.just(String.format("[No Handler]I received your string: %s. Thank you.", data));
     }
 
@@ -83,33 +78,5 @@ public class RSocketController {
         UUID uuid = UUID.randomUUID();
         this.requestProcessor.processRequests(rSocketRequester, uuid);
         return Mono.just(uuid.toString());
-    }
-
-
-    @MessageMapping("test.connect.requester")
-    public Mono<String> testRequester(String data) {
-        System.out.printf("[test.connect.requester]Received echo string from client: %s\n", data);
-
-        // Test rSocket Requester
-        RSocketRequester requester = clientsManager.getClientRequester("123");
-
-        // 注意 Metadata 的 Route
-        ByteBuf routeMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("request.server.call"));
-
-        if (requester != null) {
-            Mono.just("Server is calling you.")
-//                .delayElement(Duration.ofSeconds(ThreadLocalRandom.current().nextInt(5, 10)))
-                    .flatMap(m -> requester.rsocketClient().requestResponse(
-                                            Mono.just(ByteBufPayload.create(
-                                                    ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a message from server using spring-stack."),
-                                                    routeMetadata)))
-                                    .doOnSuccess(p -> System.out.printf("[test.connect.requester]Received from client: %s.", p.getDataUtf8()))
-//                        .route("request.status.callback")
-//                        .data(m)
-//                                .send()
-                    )
-                    .subscribe();
-        }
-        return Mono.just(String.format("[test.connect.requester]I received your string: %s. I will call your handler.", data));
     }
 }

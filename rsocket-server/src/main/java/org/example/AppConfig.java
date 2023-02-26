@@ -10,7 +10,8 @@ import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHa
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.web.util.pattern.PathPatternRouteMatcher;
 
-// Reference: https://docs.spring.io/spring-framework/docs/current/reference/html/rsocket.html#rsocket-annot-responders-server
+// Reference:
+// https://docs.spring.io/spring-integration/reference/html/rsocket.html#rsocket
 @Configuration
 @EnableAsync
 @ComponentScan(basePackages = {"org.example.controller", "org.example.dto", "org.example.manager",})

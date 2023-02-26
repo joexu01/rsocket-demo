@@ -21,12 +21,12 @@ import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
-// reference: https://github.com/rsocket/rsocket-java/blob/master/rsocket-examples/src/main/java/io/rsocket/examples/transport/tcp/client/RSocketClientExample.java
 
-public class RSocketClientRaw {
-
+public class RSocketClientRawNoBlock {
     static String decodeRoute(ByteBuf metadata) {
         final RoutingMetadata routingMetadata = new RoutingMetadata(metadata);
 
@@ -35,7 +35,13 @@ public class RSocketClientRaw {
 
     // 加载 trust store
     static {
-        System.setProperty("javax.net.ssl.trustStore", RSocketClientRaw.class.getClassLoader().getResource("truststore/client.truststore").getPath());
+        System.setProperty("javax.net.ssl.trustStore",
+                Objects.requireNonNull(
+                                RSocketClientRaw.class
+                                        .getClassLoader()
+                                        .getResource("truststore/client.truststore"))
+                        .getPath()
+        );
     }
 
     public static void main(String[] args) {
@@ -44,7 +50,9 @@ public class RSocketClientRaw {
         // 随机生成 UUID 标识客户端
         UUID uuid = UUID.randomUUID();
         // 生成 SETUP 阶段（建立连接时） Payload 使用的 route 信息
-        ByteBuf setupRouteMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("connect.setup"));
+        ByteBuf setupRouteMetadata = TaggingMetadataCodec.createTaggingContent(
+                ByteBufAllocator.DEFAULT,
+                Collections.singletonList("connect.setup"));
 
         RSocket socket = RSocketConnector.create()
                 .metadataMimeType(WellKnownMimeType.MESSAGE_RSOCKET_ROUTING.getString())
@@ -76,7 +84,6 @@ public class RSocketClientRaw {
                         }
                 ))
                 .reconnect(Retry.backoff(2, Duration.ofMillis(500)))
-//                .connect(TcpClientTransport.create("127.0.0.1", 8099))
                 .connect(
                         TcpClientTransport.create(
                                 TcpClient.create()
@@ -85,46 +92,77 @@ public class RSocketClientRaw {
                                         .secure()))
                 .block();
 
+        assert socket != null;
+
         // 测试 Req&Resp
         ByteBuf routeMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("test.echo"));
-
-        assert socket != null;
         Mono<Payload> requestResponse = socket.requestResponse(
                 ByteBufPayload.create(
                         ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a message from client using rsocket-java library."),
                         routeMetadata));
 
-//        Payload payload1 = requestResponse.block();
-//        requestResponse.map(Payload::getDataUtf8).onErrorMap(Throwable::getCause).doOnSuccess(logger::info).block();
         requestResponse
-                .doOnSubscribe(subscription -> {
-                    logger.info("Test1 - R&R subscribed by server: {}", subscription.toString());
-                })
+                // 当携带请求的 Mono 被 Server 接收后要做的事情
+                .doOnSubscribe(subscription -> logger.info("Test1 - R&R subscribed by server: {}", subscription.toString()))
+                // 当携带的请求成功后要做的事情
                 .doOnSuccess(payload -> {
                     logger.info("Test1 - Successfully returned: {}", payload.getDataUtf8());
                     payload.release();
-                }).log().subscribe();
-//        assert payload1 != null;
-//        logger.info("Test1 - Request & Response Payload from Server: {}", payload1.getDataUtf8());
+                })
+                .doOnError(throwable -> logger.info("Test1 doOnError - R&R returned error: {}", throwable.toString()))
+                // 可以使用 timeout 丢弃等待超时的 Mono
+//                .timeout(Duration.ofSeconds(1))
+                // 可以使用 doOnTerminate 在请求结束后做一些工作
+                // .doOnTerminate(() -> {})
+                // 但是一定要设置 doOnError
+                .doOnError(TimeoutException.class, e -> logger.info("Test1 doOnError: {}", e.toString()))
+                .onErrorReturn(TimeoutException.class, DefaultPayload.create("Payload: Test1 - timeout"))
+                // 可以使用 log() 来观察数据的状态
+                // .log()
+                // 订阅服务器生成的消息
+                .subscribe();
 
         // 测试 FnF
         routeMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("upload.log"));
-        Mono<Void> fireAndForget = socket.fireAndForget(
-                ByteBufPayload.create(
-                        ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a log from client using rsocket-java library."),
-                        routeMetadata));
-
-        fireAndForget.block();
-        logger.info("Test2 - Fire And Forget: Message has sent to server.");
+        socket.fireAndForget(
+                        ByteBufPayload.create(
+                                ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a log from client using rsocket-java library."),
+                                routeMetadata))
+                .doOnSubscribe(subscription -> logger.info("Test2 - Fire And Forget onSubscribe: {}", subscription.toString()))
+                .subscribe();
 
         // 测试 Server request (callback)
         routeMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("handler.task"));
-        Mono<Payload> taskResp = socket.requestResponse(
+        socket.requestResponse(
+                        ByteBufPayload.create(
+                                ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a task request from client using rsocket-java library."),
+                                routeMetadata))
+                .doOnSubscribe(subscription -> logger.info("Test3 - R&R subscribed by server: {}", subscription.toString()))
+                .doOnSuccess(payload -> {
+                    logger.info("Test3 - Successfully returned: {}", payload.getDataUtf8());
+                    payload.release();
+                })
+                .doOnError(throwable -> logger.info("Test3 - R&R Server returned error: {}", throwable.toString()))
+                .subscribe();
+
+        routeMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("test.echo"));
+        Mono<Payload> requestResponse2 = socket.requestResponse(
                 ByteBufPayload.create(
-                        ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a task request from client using rsocket-java library."),
+                        ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "TEST4 - Message"),
                         routeMetadata));
 
-        logger.info("Test3 - Server Request Payload from Server: {}", taskResp.block().getDataUtf8());
+        requestResponse2
+                // 当携带请求的 Mono 被 Server 接收后要做的事情
+                .doOnSubscribe(subscription -> logger.info("Test4 - R&R subscribed by server: {}", subscription.toString()))
+                // 当携带的请求成功后要做的事情
+                .doOnSuccess(payload -> {
+                    logger.info("Test4 - Successfully returned: {}", payload.getDataUtf8());
+                    payload.release();
+                })
+                .doOnError(throwable -> logger.info("Test4 doOnError - R&R returned error: {}", throwable.toString()))
+                .doOnError(TimeoutException.class, e -> logger.info("Test4 doOnError: {}", e.toString()))
+                .onErrorReturn(TimeoutException.class, DefaultPayload.create("Payload: Test4 - timeout"))
+                .subscribe();
 
         socket.onClose().block();
     }
