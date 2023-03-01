@@ -10,25 +10,22 @@ import io.rsocket.core.RSocketConnector;
 import io.rsocket.metadata.RoutingMetadata;
 import io.rsocket.metadata.TaggingMetadataCodec;
 import io.rsocket.metadata.WellKnownMimeType;
-import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.transport.netty.client.WebsocketClientTransport;
 import io.rsocket.util.ByteBufPayload;
 import io.rsocket.util.DefaultPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-import reactor.netty.tcp.TcpClient;
 import reactor.util.retry.Retry;
 
 import java.net.URI;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-public class RSocketClientWS {
+public class RSocketClientWSProxy {
     static String decodeRoute(ByteBuf metadata) {
         final RoutingMetadata routingMetadata = new RoutingMetadata(metadata);
 
@@ -41,7 +38,7 @@ public class RSocketClientWS {
                 Objects.requireNonNull(
                                 RSocketClientRaw.class
                                         .getClassLoader()
-                                        .getResource("truststore/client.truststore"))
+                                        .getResource("truststore/client-openssl.truststore"))
                         .getPath()
         );
     }
@@ -86,7 +83,7 @@ public class RSocketClientWS {
                         }
                 ))
                 .reconnect(Retry.backoff(2, Duration.ofMillis(500)))
-                .connect(WebsocketClientTransport.create(URI.create("ws://localhost:8000/ws/")))
+                .connect(WebsocketClientTransport.create(URI.create("wss://localhost:8443/ws/")))
 //                .connect(WebsocketClientTransport.create(URI.create("wss://127.0.0.1:8099/")))
 //                .connect(
 //                        TcpClientTransport.create(

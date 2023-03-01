@@ -2,17 +2,20 @@ spring:
   rsocket:
     server:
       port: 8099
-      transport: tcp
-      ssl:
-        enabled: true  # 开启证书验证
-        key-store-type: "PKCS12" # 证书类型
-        key-store: classpath:keystore/rsocket-server.p12  #类路径下的自签证书
+      mapping-path: "/ws"
+      transport: websocket
+#      ssl:
+#        enabled: true  # 开启证书验证
+#        key-store-type: "PKCS12" # 证书类型
+#        key-store: classpath:keystore/rsocket-server.p12  #类路径下的自签证书
 #        key-store: "/home/joseph/repo/rsocket-java-demo/rsocket-server/src/main/resources/keystore/rsocket-server.p12"
-        key-store-password: "password" #证书密码
-        client-auth: none
-        protocol: "TLS"
-        enabled-protocols: "TLSv1.2"
-        key-alias: "rsocket" # 证书别名
+#        key-store-password: "password" #证书密码
+#        client-auth: none
+#        protocol: "TLS"
+#        enabled-protocols: "TLSv1.2"
+#        key-alias: "rsocket" # 证书别名
+  jackson:
+    time-zone: "GMT+8"
 
 server:
   port: 8080
