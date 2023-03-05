@@ -3,6 +3,7 @@ package org.example.controller;
 import org.example.dto.ServerResponse;
 import org.example.dto.Status;
 import org.example.manager.ConnectedClientsManager;
+import org.example.service.RequestProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +13,9 @@ import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.annotation.ConnectMapping;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -58,7 +61,8 @@ public class RSocketController {
     }
 
     @MessageMapping("")
-    public Mono<String> simplyEchoNoHandler(String data) {
+    public Mono<String> simplyEchoNoHandler(@Headers Map<String, Object> header, String data) {
+        header.forEach((k, v) -> System.out.printf("[No Handler]header key: %s, val: %s\n", k, v));
         logger.info("No Handler: Received echo string from client: {}", data);
         return Mono.just(String.format("[No Handler]I received your string: %s. Thank you.", data));
     }
@@ -78,5 +82,14 @@ public class RSocketController {
         UUID uuid = UUID.randomUUID();
         this.requestProcessor.processRequests(rSocketRequester, uuid);
         return Mono.just(uuid.toString());
+    }
+
+    @MessageMapping("handler.request.stream")
+    public Flux<String> responseStreaming(String request) {
+        logger.info("[handler.request.stream: {}", request);
+        return Flux
+                .interval(Duration.ofSeconds(1))
+                .map(idx -> String.format("Resp: Server: %s, Thank you!", idx))
+                .log();
     }
 }

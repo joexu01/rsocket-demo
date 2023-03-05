@@ -10,12 +10,8 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>rsocket-client</module>
         <module>rsocket-server</module>
         <module>rsocket-client-raw</module>
-        <module>rsocket-client-2</module>
-        <module>long-running-task-example</module>
-        <module>long-connection-example</module>
     </modules>
 
     <properties>
@@ -33,11 +29,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-<!--            <dependency>-->
-<!--                <groupId>org.projectlombok</groupId>-->
-<!--                <artifactId>lombok</artifactId>-->
-<!--                <version>1.18.20</version>-->
-<!--            </dependency>-->
         </dependencies>
     </dependencyManagement>
 

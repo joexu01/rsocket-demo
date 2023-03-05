@@ -2,17 +2,20 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
       <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="rsocket-client-2" />
-        <module name="long-running-task-example" />
         <module name="rsocket-client-raw" />
-        <module name="rsocket-client" />
         <module name="rsocket-server" />
-        <module name="long-connection-example" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="long-connection-example" target="1.8" />
+      <module name="long-running-task-example" target="1.8" />
+      <module name="rsocket-client" target="1.8" />
+      <module name="rsocket-client-2" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

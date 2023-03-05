@@ -2,8 +2,9 @@ spring:
   rsocket:
     server:
       port: 8099
-      mapping-path: "/ws"
-      transport: websocket
+#      mapping-path: "/ws"
+#      transport: websocket
+      transport: tcp
 #      ssl:
 #        enabled: true  # 开启证书验证
 #        key-store-type: "PKCS12" # 证书类型

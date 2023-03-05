@@ -10,21 +10,19 @@ import io.rsocket.core.RSocketConnector;
 import io.rsocket.metadata.RoutingMetadata;
 import io.rsocket.metadata.TaggingMetadataCodec;
 import io.rsocket.metadata.WellKnownMimeType;
-import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.transport.netty.client.WebsocketClientTransport;
 import io.rsocket.util.ByteBufPayload;
 import io.rsocket.util.DefaultPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.tcp.TcpClient;
 import reactor.util.retry.Retry;
 
+import java.io.PrintStream;
 import java.net.URI;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
@@ -36,15 +34,15 @@ public class RSocketClientWS {
     }
 
     // 加载 trust store
-    static {
-        System.setProperty("javax.net.ssl.trustStore",
-                Objects.requireNonNull(
-                                RSocketClientRaw.class
-                                        .getClassLoader()
-                                        .getResource("truststore/client.truststore"))
-                        .getPath()
-        );
-    }
+//    static {
+//        System.setProperty("javax.net.ssl.trustStore",
+//                Objects.requireNonNull(
+//                                RSocketClientRaw.class
+//                                        .getClassLoader()
+//                                        .getResource("truststore/client.truststore"))
+//                        .getPath()
+//        );
+//    }
 
     public static void main(String[] args) {
         final Logger logger = LoggerFactory.getLogger(RSocketClientRaw.class);
@@ -166,6 +164,22 @@ public class RSocketClientWS {
                 .doOnError(throwable -> logger.info("Test4 doOnError - R&R returned error: {}", throwable.toString()))
                 .doOnError(TimeoutException.class, e -> logger.info("Test4 doOnError: {}", e.toString()))
                 .onErrorReturn(TimeoutException.class, DefaultPayload.create("Payload: Test4 - timeout"))
+                .subscribe();
+
+        routeMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("handler.request.stream"));
+        Flux<Payload> requestStream = socket.requestStream(
+                ByteBufPayload.create(
+                        ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "TEST5 - Request&Stream"),
+                        routeMetadata));
+
+        requestStream
+                .map(payload -> System.out.printf("%s\n", payload.getDataUtf8()))
+                .doOnSubscribe(subscription -> logger.info("Test5 - Request&Stream subscribed by server: {}", subscription.toString()))
+                .doOnNext(PrintStream::println)
+                .take(10)
+                .then()
+                .doFinally(signalType -> socket.onClose())
+//                .then()
                 .subscribe();
 
         socket.onClose().block();

@@ -32,6 +32,7 @@ public class ConnectedClientsManager {
                 .doFirst(() -> this.clients.put(clientIdentifier, new ConnectedClient(requester)))
                 .doFinally(sig -> {
                     logger.info("Client closed, uuid is {}. signal is {}.", clientIdentifier, sig.toString());
+                    this.clients.remove(clientIdentifier);
                 }).subscribe();
     }
 

@@ -1,4 +1,4 @@
-package org.example.controller;
+package org.example.service;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
