@@ -3,6 +3,7 @@ package org.example.controller;
 import org.example.dto.ServerResponse;
 import org.example.dto.Status;
 import org.example.manager.ConnectedClientsManager;
+import org.example.service.MathService;
 import org.example.service.RequestProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
 
-import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -46,13 +46,6 @@ public class RSocketController {
         return Mono.empty();
     }
 
-    // 接收主动上传的状态信息 @MessageMapping -> 使用 RSocket 处理
-    @MessageMapping("upload.status")
-    public Mono<ServerResponse> receiveActivelyUploadStatus(Status status) {
-        logger.info("[upload.status]Received Status from client: {}", status.uuid);
-        return Mono.just(new ServerResponse(String.format("I received your status. The Uuid was %s.", status.uuid)));
-    }
-
     @MessageMapping("test.echo")
     public Mono<String> simplyEcho(String data) throws InterruptedException {
         Thread.sleep(3000);
@@ -73,23 +66,50 @@ public class RSocketController {
         System.out.printf("[upload.log]UploadEventLogs: Received log string from client: %s\n", data);
     }
 
+
+    // 接收主动上传的状态信息 @MessageMapping -> 使用 RSocket 处理
+    @MessageMapping("upload.status")
+    public Mono<ServerResponse> receiveActivelyUploadStatus(Status status) {
+        logger.info("[upload.status]Received Status from client: {}", status.uuid);
+        return Mono.just(new ServerResponse(String.format("I received your status. The Uuid was %s.", status.uuid)));
+    }
+
+
     @Autowired
     private RequestProcessor requestProcessor;
 
     @MessageMapping("handler.task")
     public Mono<String> task(String request, RSocketRequester rSocketRequester) {
-        System.out.printf("[handler.request]Client request: %s\n", request);
+       logger.info("[handler.request]Client request: {}", request);
         UUID uuid = UUID.randomUUID();
         this.requestProcessor.processRequests(rSocketRequester, uuid);
         return Mono.just(uuid.toString());
     }
 
     @MessageMapping("handler.request.stream")
-    public Flux<String> responseStreaming(String request) {
-        logger.info("[handler.request.stream: {}", request);
+    public Flux<String> responseStreaming(Mono<String> request) {
+        request
+                .doOnNext(s -> logger.info("[handler.request.stream]: {}", s))
+                // 使用 then() 结束操作链
+                .then()
+                .subscribe();
+        // 事实上，严格按照响应式编程的策略，这里应该直接对 Mono 进行操作，可以使用 flatMapMany()
+        // flatMapMany() 操作符可以把生成的数据流通过异步方式处理，扩展出新的数据流
+        // 一个示例：
+        // Mono.just(3)
+        //    .flatMapMany(i -> Flux.range(0, i))
+        //    .subscribe(System.out::println);
+        // 就是这样
         return Flux
-                .interval(Duration.ofSeconds(1))
-                .map(idx -> String.format("Resp: Server: %s, Thank you!", idx))
-                .log();
+                .range(1, 10)
+                .map(idx -> String.format("Resp from Server: %s, Thank you!", idx));
+    }
+
+    @Autowired
+    private MathService mathService;
+
+    @MessageMapping("handler.request.channel")
+    public Flux<String> responseChannel(@org.springframework.messaging.handler.annotation.Payload Flux<String> payloads) {
+        return this.mathService.doubleInteger(payloads);
     }
 }
