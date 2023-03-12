@@ -125,7 +125,8 @@ public class FourCommunicationScheme {
                 // 当然可以使用 map 对每个 Payload 进行操作
                 // .map(payload -> System.out.printf("%s\n", payload.getDataUtf8()))
                 .doOnSubscribe(subscription -> logger.info("Test3 subscribed to {}", subscription.toString()))
-                // 但是 doOnNext 也能对每一个 Payload 进行操作
+                // 使用 doOnNext 不会对流的数据进行改变
+                // doOnNext()是一个 Reactor 式流操作符，它允许编写者注册一个在每次出现新元素时执行的回调函数
                 .doOnNext(nextPayload -> System.out.println("Test3 Received payload: " + nextPayload.getDataUtf8()))
                 // 当需要从流中选择一些特定的元素时，可以使用 Flux.take(long n) 操作符
                 // 该操作符将创建一个新的 Flux，该 Flux 包含原始 Flux 的前 n 个元素

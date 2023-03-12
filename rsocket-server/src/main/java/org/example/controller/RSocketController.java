@@ -109,7 +109,7 @@ public class RSocketController {
     private MathService mathService;
 
     @MessageMapping("handler.request.channel")
-    public Flux<String> responseChannel(@org.springframework.messaging.handler.annotation.Payload Flux<String> payloads) {
+    public Flux<String> responseChannel(Flux<String> payloads) {
         return this.mathService.doubleInteger(payloads);
     }
 }
