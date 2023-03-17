@@ -16,6 +16,7 @@ import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -48,9 +49,30 @@ public class RSocketController {
 
     @MessageMapping("test.echo")
     public Mono<String> simplyEcho(String data) throws InterruptedException {
-        Thread.sleep(3000);
+//        Thread.sleep(3000);
         logger.info("[test.echo]Received echo string from client: {}", data);
         return Mono.just(String.format("[test.echo]I received your string: %s. Thank you.", data));
+    }
+
+    @MessageMapping("test.echo.block")
+    public Mono<String> blockEcho(String data) throws InterruptedException {
+        Thread.sleep(300000);
+        logger.info("[test.echo.block]Received echo string from client: {}", data);
+        return Mono.just(String.format("[test.echo.block]I received your string: %s. Thank you.", data));
+    }
+
+    @MessageMapping("test.echo.mono")
+    public Mono<String> monoEcho(Mono<String> data) throws InterruptedException {
+        return data.delayElement(Duration.ofMillis(3000)).map(s -> {
+            return String.format("[test.echo.mono]I received your string: %s. Thanks!", s);
+        });
+    }
+
+    @MessageMapping("test.echo.mono.5")
+    public Mono<String> monoEcho5(Mono<String> data) throws InterruptedException {
+        return data.delayElement(Duration.ofMillis(5000)).map(s -> {
+            return String.format("[test.echo.mono]I received your string: %s. Thanks!", s);
+        });
     }
 
     @MessageMapping("")

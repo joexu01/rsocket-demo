@@ -76,7 +76,7 @@ public class FourCommunicationScheme {
         assert socket != null;
 
         // 测试 Req&Resp
-        ByteBuf routeMetadata = encodeRoute("test.echo");
+        ByteBuf routeMetadata = encodeRoute("test.echo.mono.5");
         Payload echoPayload = ByteBufPayload.create(
                 ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a message from client using rsocket-java library."),
                 routeMetadata);
