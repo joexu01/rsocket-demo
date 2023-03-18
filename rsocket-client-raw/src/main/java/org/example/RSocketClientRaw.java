@@ -98,7 +98,7 @@ public class RSocketClientRaw {
 //        requestResponse.map(Payload::getDataUtf8).onErrorMap(Throwable::getCause).doOnSuccess(logger::info).block();
         requestResponse
                 .doOnSubscribe(subscription -> {
-                    logger.info("Test1 - R&R subscribed by server: {}", subscription.toString());
+                    logger.info("Test1 - R&R subscribed: {}", subscription.toString());
                 })
                 .doOnSuccess(payload -> {
                     logger.info("Test1 - Successfully returned: {}", payload.getDataUtf8());

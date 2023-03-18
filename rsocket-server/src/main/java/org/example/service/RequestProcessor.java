@@ -26,16 +26,16 @@ public class RequestProcessor {
         ByteBuf routeMetadata = TaggingMetadataCodec.createTaggingContent(ByteBufAllocator.DEFAULT, Collections.singletonList("request.status.callback"));
 
         Mono.just("Your request " + uuid + "  is completed")
-                .delayElement(Duration.ofSeconds(ThreadLocalRandom.current().nextInt(10, 15)))
-                .flatMap(m -> rSocketRequester.rsocketClient().requestResponse(
+                .delayElement(Duration.ofSeconds(ThreadLocalRandom.current().nextInt(1, 5)))
+                .flatMap(
+                        m -> rSocketRequester.rsocketClient()
+                                .requestResponse(
                                         Mono.just(ByteBufPayload.create(
                                                 ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT,
                                                         String.format("[TASK %s]This is a task result from server using spring.", uuid)),
-                                                routeMetadata)))
+                                                routeMetadata
+                                        )))
                                 .doOnSuccess(p -> logger.info("[RequestProcessor.processRequests]Received from client: {}", p.getDataUtf8()))
-//                        .route("request.status.callback")
-//                        .data(m)
-//                                .send()
                 )
                 .subscribe();
     }

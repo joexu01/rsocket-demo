@@ -56,7 +56,7 @@ public class RestApiController {
                                                         ByteBufAllocator.DEFAULT,
                                                         "This is a message from server using spring-stack."),
                                                 routeMetadata)))
-                        .doOnSubscribe(subscription -> logger.info("Client subscribed."))
+                        .doOnSubscribe(subscription -> logger.info("subscribed."))
                         .doOnError(throwable -> logger.error("Error when calling client: {}", throwable.toString()))
                         .doOnSuccess(p -> logger.info("[test.connect.requester]Received from client: {}.", p.getDataUtf8()))
                 )

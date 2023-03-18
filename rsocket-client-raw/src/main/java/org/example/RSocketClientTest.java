@@ -83,16 +83,15 @@ public class RSocketClientTest {
                 ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a message from client using rsocket-java library."),
                 routeMetadata);
 
-//        Mono<Payload> requestResponse = socket.requestResponse(echoPayload);
-//        requestResponse
-//                .doOnSubscribe(subscription -> logger.info("Test1 subscribed to {}", subscription.toString()))
-//                .doOnSuccess(payload -> {
-//                    logger.info("Test1 - Successfully returned: {}", payload.getDataUtf8());
-//                    payload.release();
-//                })
-//                .doOnError(throwable -> logger.info("Test1 doOnError: {}", throwable.toString()))
-//                .onErrorReturn(TimeoutException.class, DefaultPayload.create("Payload: Test1 - timeout"))
-//                .subscribe();
+        Mono<Payload> requestResponse = socket.requestResponse(echoPayload);
+        requestResponse
+                .doOnSuccess(payload -> {
+                    logger.info("Test1 - Successfully returned: {}", payload.getDataUtf8());
+                    payload.release();
+                })
+                .doOnError(throwable -> logger.info("Test1 doOnError: {}", throwable.toString()))
+                .onErrorReturn(TimeoutException.class, DefaultPayload.create("Payload: Test1 - timeout"))
+                .subscribe();
 
         routeMetadata = encodeRoute("test.echo.mono");
         echoPayload = ByteBufPayload.create(
@@ -101,7 +100,6 @@ public class RSocketClientTest {
 
         Mono<Payload> requestResponse2 = socket.requestResponse(echoPayload);
         requestResponse2
-                .doOnSubscribe(subscription -> logger.info("Test2 subscribed to {}", subscription.toString()))
                 .doOnSuccess(payload -> {
                     logger.info("Test2 - Successfully returned: {}", payload.getDataUtf8());
                     payload.release();
@@ -117,7 +115,6 @@ public class RSocketClientTest {
 
         Mono<Payload> requestResponse3 = socket.requestResponse(echoPayload);
         requestResponse3
-                .doOnSubscribe(subscription -> logger.info("Test3 subscribed to {}", subscription.toString()))
                 .doOnSuccess(payload -> {
                     logger.info("Test3 - Successfully returned: {}", payload.getDataUtf8());
                     payload.release();

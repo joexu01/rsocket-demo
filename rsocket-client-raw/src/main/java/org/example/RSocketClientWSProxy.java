@@ -104,7 +104,7 @@ public class RSocketClientWSProxy {
 
         requestResponse
                 // 当携带请求的 Mono 被 Server 接收后要做的事情
-                .doOnSubscribe(subscription -> logger.info("Test1 - R&R subscribed by server: {}", subscription.toString()))
+                .doOnSubscribe(subscription -> logger.info("Test1 - subscribed by: {}", subscription.toString()))
                 // 当携带的请求成功后要做的事情
                 .doOnSuccess(payload -> {
                     logger.info("Test1 - Successfully returned: {}", payload.getDataUtf8());
@@ -129,7 +129,7 @@ public class RSocketClientWSProxy {
                         ByteBufPayload.create(
                                 ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a log from client using rsocket-java library."),
                                 routeMetadata))
-                .doOnSubscribe(subscription -> logger.info("Test2 - Fire And Forget onSubscribe: {}", subscription.toString()))
+                .doOnSubscribe(subscription -> logger.info("Test2 - subscribed: {}", subscription.toString()))
                 .subscribe();
 
         // 测试 Server request (callback)
@@ -138,7 +138,7 @@ public class RSocketClientWSProxy {
                         ByteBufPayload.create(
                                 ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a task request from client using rsocket-java library."),
                                 routeMetadata))
-                .doOnSubscribe(subscription -> logger.info("Test3 - R&R subscribed by server: {}", subscription.toString()))
+                .doOnSubscribe(subscription -> logger.info("Test3 - subscribed: {}", subscription.toString()))
                 .doOnSuccess(payload -> {
                     logger.info("Test3 - Successfully returned: {}", payload.getDataUtf8());
                     payload.release();
@@ -154,7 +154,7 @@ public class RSocketClientWSProxy {
 
         requestResponse2
                 // 当携带请求的 Mono 被 Server 接收后要做的事情
-                .doOnSubscribe(subscription -> logger.info("Test4 - R&R subscribed by server: {}", subscription.toString()))
+                .doOnSubscribe(subscription -> logger.info("Test4 - R&R subscribed: {}", subscription.toString()))
                 // 当携带的请求成功后要做的事情
                 .doOnSuccess(payload -> {
                     logger.info("Test4 - Successfully returned: {}", payload.getDataUtf8());

@@ -3,27 +3,29 @@ package org.example;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
-import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.core.RSocketConnector;
+import io.rsocket.core.RSocketServer;
 import io.rsocket.metadata.RoutingMetadata;
 import io.rsocket.metadata.TaggingMetadataCodec;
 import io.rsocket.metadata.WellKnownMimeType;
+import io.rsocket.plugins.InitializingInterceptorRegistry;
+import io.rsocket.plugins.InterceptorRegistry;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.util.ByteBufPayload;
 import io.rsocket.util.DefaultPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.tcp.TcpClient;
 import reactor.util.retry.Retry;
 
+import javax.naming.InitialContext;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.UUID;
-import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 /*
 运行这个示例时，rsocket-server 的 application.yaml 应该为：
@@ -67,44 +69,31 @@ public class CallingTheClientSide {
                         ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, uuid.toString()),
                         setupRouteMetadata))
 
-                .acceptor(SocketAcceptor.forRequestResponse(
-                        payload -> {
-                            String route = decodeRoute(payload.sliceMetadata());
-                            logger.info("[Client Acceptor] Received RequestResponse[route={}]", route);
+                .acceptor(new SocketAcceptorImpl())
 
-                            String metadataUtf8 = payload.getMetadataUtf8();
-                            String dataUtf8 = payload.getDataUtf8();
-                            logger.info("[Client Acceptor] This Req&Resp contains data: {}, metadata: {}", dataUtf8, metadataUtf8);
-
-                            payload.release();
-
-                            if ("request.status.callback".equals(route)) {
-                                return Mono.just(ByteBufPayload.create("Thanks for handling my task!"));
-                            } else if ("request.server.call".equals(route)) {
-                                return Mono.just(ByteBufPayload.create("You called my handler actively from server!"));
-                            }
-
-                            byte[] respBytes = String
-                                    .format("Client received your message. Maybe someday I will do as you say. Your meta is %s and data is %s",
-                                            metadataUtf8, dataUtf8).getBytes();
-                            return Mono.just(DefaultPayload.create(respBytes));
-                        }
-                ))
-
-                .acceptor(SocketAcceptor.forFireAndForget(
-                        payload -> {
-                            String route = decodeRoute(payload.sliceMetadata());
-                            logger.info("[Client Acceptor] Received RequestResponse[route={}]", route);
-
-                            String metadataUtf8 = payload.getMetadataUtf8();
-                            String dataUtf8 = payload.getDataUtf8();
-                            logger.info("[Client Acceptor] This Req&Resp contains data: {}, metadata: {}", dataUtf8, metadataUtf8);
-
-                            payload.release();
-
-                            return Mono.empty();
-                        }
-                ))
+//                .acceptor(SocketAcceptor.forRequestResponse(
+//                        payload -> {
+//                            String route = decodeRoute(payload.sliceMetadata());
+//                            logger.info("[Client Acceptor] Received RequestResponse[route={}]", route);
+//
+//                            String metadataUtf8 = payload.getMetadataUtf8();
+//                            String dataUtf8 = payload.getDataUtf8();
+//                            logger.info("[Client Acceptor] This Req&Resp contains data: {}, metadata: {}", dataUtf8, metadataUtf8);
+//
+//                            payload.release();
+//
+//                            if ("request.status.callback".equals(route)) {
+//                                return Mono.just(ByteBufPayload.create("Thanks for handling my task!"));
+//                            } else if ("request.server.call".equals(route)) {
+//                                return Mono.just(ByteBufPayload.create("You called my handler actively from server!"));
+//                            }
+//
+//                            byte[] respBytes = String
+//                                    .format("Client received your message, but no handler matched. Your meta is %s and data is %s",
+//                                            metadataUtf8, dataUtf8).getBytes();
+//                            return Mono.just(DefaultPayload.create(respBytes));
+//                        }
+//                ))
 
                 // 设置重连策略
                 .reconnect(Retry.backoff(2, Duration.ofMillis(500)))
@@ -124,12 +113,11 @@ public class CallingTheClientSide {
                         ByteBufPayload.create(
                                 ByteBufUtil.writeUtf8(ByteBufAllocator.DEFAULT, "This is a task request from client using rsocket-java library."),
                                 routeMetadata))
-                .doOnSubscribe(subscription -> logger.info("Test3 - R&R subscribed by server: {}", subscription.toString()))
                 .doOnSuccess(payload -> {
                     logger.info("Test3 - Successfully returned: {}", payload.getDataUtf8());
                     payload.release();
                 })
-                .doOnError(throwable -> logger.info("Test3 - R&R Server returned error: {}", throwable.toString()))
+                .doOnError(throwable -> logger.info("Test3 - R&R error: {}", throwable.toString()))
                 .subscribe();
 
         socket.onClose().block();
